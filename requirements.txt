@@ -16,3 +16,12 @@ tensorflow-hub>=0.16
 
 openai-whisper>=20231117
 soundfile>=0.12
+
+# RAM (installed separately per SETUP.md step 6) needs transformers but doesn't
+# declare it as a dependency, so pin it here. Must stay <5 — RAM's bundled
+# bert.py imports apply_chunking_to_forward/find_pruneable_heads_and_indices/
+# prune_linear_layer from transformers.modeling_utils, which moved to
+# transformers.pytorch_utils partway through the 4.x line; even the newest
+# 4.x release keeps the old modeling_utils import broken, so after installing
+# RAM you also need to hand-patch that import — see SETUP.md step 6.
+transformers<5,>=4.25.1

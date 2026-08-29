@@ -18,6 +18,28 @@ _yamnet_class_names = None
 _whisper_model = None
 
 
+def _has_audio_stream(video_path: Path) -> bool:
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "a",
+            "-show_entries", "stream=index", "-of", "csv=p=0", str(video_path),
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    return bool(result.stdout.strip())
+
+
+def _write_silence(wav_path: Path, seconds: float = 1.0, sample_rate: int = 16000) -> None:
+    """Some source clips (e.g. drone footage) have no audio track at all.
+    Writing a short silent WAV keeps downstream analysis (RMS check, YAMNet,
+    which needs at least ~1s to form a patch) working instead of crashing."""
+    with wave.open(str(wav_path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(b"\x00\x00" * int(seconds * sample_rate))
+
+
 def extract_audio(video_path: str, wav_dir: str) -> str:
     """Pull mono 16kHz audio out of the proxy for YAMNet/Whisper."""
     video_path = Path(video_path)
@@ -26,13 +48,16 @@ def extract_audio(video_path: str, wav_dir: str) -> str:
     wav_path = wav_dir / f"{video_path.stem}.wav"
 
     if not wav_path.exists():
-        subprocess.run(
-            [
-                "ffmpeg", "-y", "-i", str(video_path),
-                "-vn", "-ac", "1", "-ar", "16000", str(wav_path),
-            ],
-            capture_output=True, text=True, check=True,
-        )
+        if not _has_audio_stream(video_path):
+            _write_silence(wav_path)
+        else:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", str(video_path),
+                    "-vn", "-ac", "1", "-ar", "16000", str(wav_path),
+                ],
+                capture_output=True, text=True, check=True,
+            )
     return str(wav_path)
 
 

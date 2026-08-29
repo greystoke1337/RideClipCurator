@@ -32,7 +32,7 @@ def find_overlaps(
     enriched = []
     for c in clips:
         start = _parse_ts(c)
-        if c["camera"] == "DJI":
+        if c["camera"] in ("DJI", "drone"):
             start += timedelta(seconds=camera_offset_seconds)
         end = start + timedelta(seconds=c.get("duration", 0.0))
         enriched.append((c["clip_id"], c["camera"], start, end))

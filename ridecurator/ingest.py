@@ -15,14 +15,19 @@ from ridecurator.config import VIDEO_EXTENSIONS
 
 # Filename prefixes are the fastest camera signal and don't require probing
 # the file. GoPro Hero 10 clips look like GX010123.MP4 / GH010123.MP4.
-# DJI Osmo Action clips look like DJI_0123.MP4.
+# DJI Osmo Action (bike-mounted) and a DJI drone both look like DJI_0123.MP4 —
+# the filename alone can't tell them apart, so drone falls back to the parent
+# folder name (see detect_camera).
 _GOPRO_PREFIXES = ("GX", "GH", "GOPR")
 _DJI_PREFIXES = ("DJI_",)
+_DRONE_FOLDER_HINT = "drone"
 
 
-def detect_camera(filename: str) -> str:
-    name = filename.upper()
+def detect_camera(filepath: Path) -> str:
+    name = filepath.name.upper()
     if name.startswith(_DJI_PREFIXES):
+        if _DRONE_FOLDER_HINT in filepath.parent.name.lower():
+            return "drone"
         return "DJI"
     if name.startswith(_GOPRO_PREFIXES):
         return "GoPro"
@@ -73,7 +78,7 @@ def scan_folder(raw_dir: str | Path) -> list[dict[str, Any]]:
         clips.append({
             "clip_id": make_clip_id(filepath),
             "filepath": str(filepath),
-            "camera": detect_camera(filepath.name),
+            "camera": detect_camera(filepath),
             **probed,
         })
     return clips

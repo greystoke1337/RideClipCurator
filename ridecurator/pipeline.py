@@ -101,10 +101,19 @@ def stage_audio(conn, work_dir: str, whisper_model_size: str = "base", progress_
 
 
 def stage_other_bike(conn, overlaps: dict[str, list[str]], progress_cb: ProgressCB = None) -> None:
-    """Compound signal (spec §5.7): sync overlap + RAM's motorcycle tag on this clip."""
+    """Compound signal (spec §5.7): sync overlap + RAM's motorcycle tag on this clip.
+
+    A drone overlapping in time isn't evidence of the other rider being in
+    frame, so drone-camera overlaps don't count toward this signal.
+    """
     clips = db.get_all_clips(conn)
+    camera_by_id = {c["clip_id"]: c["camera"] for c in clips}
     for i, clip in enumerate(clips, 1):
-        visible = bool(overlaps.get(clip["clip_id"])) and has_motorcycle_tag(clip.get("tags") or [])
+        bike_overlaps = [
+            other_id for other_id in overlaps.get(clip["clip_id"], [])
+            if camera_by_id.get(other_id) != "drone"
+        ]
+        visible = bool(bike_overlaps) and has_motorcycle_tag(clip.get("tags") or [])
         db.upsert_clip(conn, {"clip_id": clip["clip_id"], "other_bike_visible": visible})
         _report(progress_cb, "other_bike", i, len(clips))
 

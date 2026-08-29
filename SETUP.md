@@ -126,6 +126,38 @@ RideClipCurator\models\ram_plus_swin_large_14m.pth
 (create the `models` folder if it doesn't exist — it's gitignored on purpose,
 checkpoints are large binary files that don't belong in git).
 
+RAM's `bert.py` imports three functions (`apply_chunking_to_forward`,
+`find_pruneable_heads_and_indices`, `prune_linear_layer`) from
+`transformers.modeling_utils` — that import path was removed from
+`transformers` (moved to `transformers.pytorch_utils`) after RAM's package
+was last updated, so tagging will crash with `ImportError: cannot import
+name 'apply_chunking_to_forward'` until you patch the installed copy. Open
+`.venv\Lib\site-packages\ram\models\bert.py` in a text editor, find this
+(around line 39):
+
+```python
+from transformers.modeling_utils import (
+    PreTrainedModel,
+    apply_chunking_to_forward,
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+)
+```
+
+and replace it with:
+
+```python
+from transformers.modeling_utils import PreTrainedModel
+from transformers.pytorch_utils import (
+    apply_chunking_to_forward,
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+)
+```
+
+(This patches your local venv's copy of a third-party package, so it'll need
+redoing if you ever recreate the venv or reinstall RAM.)
+
 ## 7. Put your footage where the app expects it
 
 Copy your GoPro and DJI clips (both cameras, all in one flat folder is fine)

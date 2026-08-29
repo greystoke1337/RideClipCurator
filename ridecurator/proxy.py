@@ -46,12 +46,16 @@ def make_thumbnail(proxy_path: str | Path, thumb_dir: str | Path) -> str:
         return str(thumb_path)
 
     duration = _probe_duration(proxy_path)
-    midpoint = max(duration / 2, 0.0)
+    # Back off half a second from the end so the seek always lands on a
+    # decodable frame — plain duration/2 can overshoot the last frame on
+    # very short clips (a fraction-of-a-second clip has no frame at its
+    # exact midpoint).
+    midpoint = max(0.0, min(duration / 2, duration - 0.5))
 
     subprocess.run(
         [
             "ffmpeg", "-y", "-ss", str(midpoint), "-i", str(proxy_path),
-            "-frames:v", "1", "-q:v", "3", str(thumb_path),
+            "-frames:v", "1", "-pix_fmt", "yuvj420p", "-q:v", "3", str(thumb_path),
         ],
         capture_output=True, text=True, check=True,
     )
