@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# footage and generated artifacts never belong in git
+data/raw/*
+data/work/*
+data/output/*
+!data/raw/.gitkeep
+!data/work/.gitkeep
+!data/output/.gitkeep
+*.db
+*.db-journal
+
+# model checkpoints (downloaded separately, see SETUP.md)
+models/
+*.pth
+*.onnx
+*.pt
+
+.streamlit/
+.DS_Store
+Thumbs.db

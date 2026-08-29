@@ -1,0 +1,18 @@
+# Install torch FIRST with the CUDA-enabled command in SETUP.md, then run:
+#   pip install -r requirements.txt
+# Do not add torch here — a plain `pip install torch` overwrites the CUDA build
+# with a CPU-only one.
+
+streamlit>=1.35
+opencv-python>=4.9
+numpy>=1.26
+pillow>=10.3
+imagehash>=4.3
+
+# YAMNet runs fine on CPU (it's a small model) — this sidesteps TensorFlow's
+# dropped native-Windows GPU support. RAM and Whisper (below/torch) use the GPU instead.
+tensorflow-cpu>=2.15
+tensorflow-hub>=0.16
+
+openai-whisper>=20231117
+soundfile>=0.12
