@@ -23,3 +23,6 @@ models/
 .streamlit/
 .DS_Store
 Thumbs.db
+
+# Playwright MCP screenshots/artifacts from interactive UI checks
+.playwright-mcp/

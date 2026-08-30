@@ -3,9 +3,12 @@
 For every clip, find which clip(s) from the *other* camera overlap in time.
 That overlap is what §5.7 (other-bike-visible) and dedup cross-checking key off.
 
-IMPORTANT: camera clocks drift. Before trusting this at scale, find two clips
-you know were shot at the same real-world moment (e.g. both riders start
-moving at a stop sign) and pass the observed offset via `camera_offset_seconds`.
+Per-camera clock corrections (e.g. a GoPro left on the wrong timezone) are
+applied once at ingest time — see ridecurator/camera_offsets.json — so by the
+time clips reach this module their timestamps should already be real UTC.
+`camera_offset_seconds` below is for any *additional* residual drift you
+measure beyond that (find two clips you know were shot at the same
+real-world moment and pass the observed gap).
 """
 
 from datetime import datetime, timedelta

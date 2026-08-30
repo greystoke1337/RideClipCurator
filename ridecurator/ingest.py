@@ -7,11 +7,29 @@ only system dependency is the ffmpeg install already required for proxies.
 import hashlib
 import json
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from ridecurator.config import VIDEO_EXTENSIONS
+
+# Measured, camera-specific clock corrections (see camera_offsets.json for the
+# methodology/evidence behind each value). Applied so every clip's stored
+# timestamp is real UTC, regardless of what each camera's clock thought it was —
+# downstream sync/scoring can then just compare timestamps directly.
+_CAMERA_OFFSETS_PATH = Path(__file__).parent / "camera_offsets.json"
+_camera_offsets_cache: dict[str, dict[str, Any]] | None = None
+
+
+def _load_camera_offsets() -> dict[str, dict[str, Any]]:
+    global _camera_offsets_cache
+    if _camera_offsets_cache is None:
+        _camera_offsets_cache = json.loads(_CAMERA_OFFSETS_PATH.read_text())
+    return _camera_offsets_cache
+
+
+def camera_clock_offset_seconds(camera: str) -> float:
+    return _load_camera_offsets().get(camera, {}).get("offset_seconds", 0.0)
 
 # Filename prefixes are the fastest camera signal and don't require probing
 # the file. GoPro Hero 10 clips look like GX010123.MP4 / GH010123.MP4.
@@ -58,13 +76,19 @@ def probe_file(filepath: Path) -> dict[str, Any]:
     if raw_ts:
         # ffprobe reports UTC ISO-8601 with a trailing "Z".
         timestamp = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
+        from_creation_time = True
     else:
         # Fall back to filesystem mtime minus duration (approximate start time).
         # This is a hint, not a guarantee — see spec §5.2 note on validating sync.
         mtime = datetime.fromtimestamp(filepath.stat().st_mtime)
         timestamp = mtime
+        from_creation_time = False
 
-    return {"duration": duration, "timestamp": timestamp.isoformat()}
+    return {
+        "duration": duration,
+        "timestamp": timestamp.isoformat(),
+        "_timestamp_from_creation_time": from_creation_time,
+    }
 
 
 def scan_folder(raw_dir: str | Path) -> list[dict[str, Any]]:
@@ -75,10 +99,18 @@ def scan_folder(raw_dir: str | Path) -> list[dict[str, Any]]:
         if filepath.suffix.lower() not in VIDEO_EXTENSIONS:
             continue
         probed = probe_file(filepath)
+        camera = detect_camera(filepath)
+
+        from_creation_time = probed.pop("_timestamp_from_creation_time")
+        offset = camera_clock_offset_seconds(camera) if from_creation_time else 0.0
+        if offset:
+            corrected = datetime.fromisoformat(probed["timestamp"]) + timedelta(seconds=offset)
+            probed["timestamp"] = corrected.isoformat()
+
         clips.append({
             "clip_id": make_clip_id(filepath),
             "filepath": str(filepath),
-            "camera": detect_camera(filepath),
+            "camera": camera,
             **probed,
         })
     return clips

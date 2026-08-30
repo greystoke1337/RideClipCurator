@@ -41,9 +41,15 @@ with tab_process:
         device = st.selectbox("Device for RAM / Whisper", ["cuda", "cpu"], index=0)
         whisper_size = st.selectbox("Whisper model size", ["tiny", "base", "small", "medium"], index=1)
         camera_offset = st.number_input(
-            "Camera clock offset, DJI relative to GoPro (seconds)",
+            "Additional camera clock offset, seconds (residual drift only)",
             value=0.0, step=0.5,
-            help="Validate on a known-matching moment first — see sync.py docstring.",
+            help=(
+                "Per-camera corrections (e.g. GoPro's known Sydney-timezone "
+                "offset) are already applied at ingest — see "
+                "ridecurator/camera_offsets.json. This is only for extra "
+                "drift beyond that; validate on a known-matching moment "
+                "first — see sync.py docstring."
+            ),
         )
 
     Path(raw_dir).mkdir(parents=True, exist_ok=True)
