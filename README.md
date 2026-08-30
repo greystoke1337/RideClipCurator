@@ -22,9 +22,11 @@ ridecurator/        Core pipeline — plain, reusable functions, no CLI-only log
   ingest.py            scan a folder, pull duration/timestamp/camera via ffprobe
   proxy.py             ffmpeg proxy transcode + thumbnail generation
   sync.py              two-camera timestamp alignment (with drift-offset support)
-  motion.py            optical-flow steadiness score
+  motion.py            optical-flow steadiness score, direction of travel, and a
+                       flow-coherence signal (mount_type below reuses it)
   color.py             golden-hour hue/saturation check
-  dedup.py             perceptual-hash near-duplicate clustering (see note below)
+  dedup.py             near-duplicate clustering: perceptual hash + a pretrained
+                       CNN embedding (see note below)
   tagging.py           RAM (Recognize Anything Model) content tags
   audio.py             YAMNet speech detection + Whisper transcript
   scoring.py           composite interest_score, with an explainable "why"
@@ -48,9 +50,12 @@ The spec names **videoduplicatefinder** for dedup detection, but it's a
 Windows-only GUI app with no CLI or scripting interface — nothing to call
 from Python. `dedup.py` implements the same outcome (clusters of
 near-identical clips, surfaced for confirmation, never auto-discarded)
-natively using perceptual-hash comparison on sampled proxy frames instead.
-You can still point the real app at the proxy folder by hand if you want a
-second opinion — nothing here depends on you doing that.
+natively instead, using perceptual-hash comparison plus a pretrained CNN
+embedding (cosine similarity) on sampled proxy frames — the embedding
+catches "practically the same shot" even across exposure/framing
+differences that perceptual hash alone misses. You can still point the real
+app at the proxy folder by hand if you want a second opinion — nothing
+here depends on you doing that.
 
 ## Status
 

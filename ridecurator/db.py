@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS clips (
     transcript TEXT,
     has_speech INTEGER,
     steadiness_score REAL,
+    camera_direction TEXT,      -- "forward" | "backward" | NULL ("unclear")
+    flow_coherence REAL,        -- how well optical flow fits a radial expansion/contraction model
+    mount_type TEXT,            -- "mounted" | "handheld" | NULL ("unclear")
     other_bike_visible INTEGER,
     dup_group_id TEXT,
     is_best_of_group INTEGER,
@@ -42,11 +45,28 @@ _BOOL_COLUMNS = {
 }
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns introduced after a DB was first created — CREATE TABLE IF
+    NOT EXISTS only runs once, so existing DBs need this to pick up new
+    fields (e.g. an older pilot.db)."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(clips)")}
+    new_columns = {
+        "camera_direction": "TEXT",
+        "flow_coherence": "REAL",
+        "mount_type": "TEXT",
+    }
+    for name, sql_type in new_columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE clips ADD COLUMN {name} {sql_type}")
+    conn.commit()
+
+
 def connect(db_path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute(SCHEMA)
     conn.commit()
+    _migrate(conn)
     return conn
 
 

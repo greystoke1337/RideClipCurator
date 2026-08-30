@@ -67,6 +67,7 @@ with tab_process:
         ("Content tags (RAM)", "tagging"),
         ("Audio (speech + transcript)", "audio"),
         ("Other-bike-visible", "other_bike"),
+        ("Mount type", "mount_type"),
         ("Dedup clustering", "dedup"),
         ("Scoring", "scoring"),
     ]
@@ -105,8 +106,10 @@ with tab_process:
                 elif key == "other_bike":
                     overlaps = st.session_state.get("overlaps") or pipeline.stage_sync(conn, camera_offset)
                     pipeline.stage_other_bike(conn, overlaps, cb)
+                elif key == "mount_type":
+                    pipeline.stage_mount_type(conn, cb)
                 elif key == "dedup":
-                    pipeline.stage_dedup(conn, cb)
+                    pipeline.stage_dedup(conn, device, cb)
                 elif key == "scoring":
                     pipeline.stage_scoring(conn, cb)
                 st.success(f"{label} done.")
@@ -145,6 +148,14 @@ with tab_review:
         tag_filter = st.sidebar.multiselect("Tags", all_tags)
         speech_only = st.sidebar.checkbox("Has speech")
         other_bike_only = st.sidebar.checkbox("Other bike visible")
+        direction_filter = st.sidebar.multiselect(
+            "Camera direction", ["forward", "backward", "unclear"],
+            default=["forward", "backward", "unclear"],
+        )
+        mount_filter = st.sidebar.multiselect(
+            "Mount type", ["mounted", "handheld", "unclear"],
+            default=["mounted", "handheld", "unclear"],
+        )
         sort_by = st.sidebar.selectbox(
             "Sort by", ["interest_score", "steadiness_score", "duration", "timestamp"],
         )
@@ -156,6 +167,8 @@ with tab_review:
             and (not tag_filter or set(tag_filter) & set(c.get("tags") or []))
             and (not speech_only or c.get("has_speech"))
             and (not other_bike_only or c.get("other_bike_visible"))
+            and (c.get("camera_direction") or "unclear") in direction_filter
+            and (c.get("mount_type") or "unclear") in mount_filter
         ]
         filtered.sort(key=lambda c: c.get(sort_by) or 0, reverse=True)
 
@@ -187,6 +200,9 @@ with tab_review:
                         badge = " (best of cluster)" if clip.get("is_best_of_group") else ""
                         st.markdown(f"**{clip['camera']}** — {clip['filepath']}{badge}")
                         st.caption(f"{clip.get('duration', 0):.1f}s · {clip.get('timestamp', '')}")
+                        direction = clip.get("camera_direction") or "unclear"
+                        mount = clip.get("mount_type") or "unclear"
+                        st.caption(f"facing: {direction} · mount: {mount}")
                         st.write(", ".join(f"`{t}`" for t in (clip.get("tags") or [])) or "_no tags_")
                         if clip.get("transcript"):
                             with st.expander("Transcript"):
