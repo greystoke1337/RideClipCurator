@@ -1,0 +1,27 @@
+# Install torch FIRST with the CUDA-enabled command in SETUP.md, then run:
+#   pip install -r requirements.txt
+# Do not add torch here — a plain `pip install torch` overwrites the CUDA build
+# with a CPU-only one.
+
+streamlit>=1.35
+opencv-python>=4.9
+numpy>=1.26
+pillow>=10.3
+imagehash>=4.3
+
+# YAMNet runs fine on CPU (it's a small model) — this sidesteps TensorFlow's
+# dropped native-Windows GPU support. RAM and Whisper (below/torch) use the GPU instead.
+tensorflow-cpu>=2.15
+tensorflow-hub>=0.16
+
+openai-whisper>=20231117
+soundfile>=0.12
+
+# RAM (installed separately per SETUP.md step 6) needs transformers but doesn't
+# declare it as a dependency, so pin it here. Must stay <5 — RAM's bundled
+# bert.py imports apply_chunking_to_forward/find_pruneable_heads_and_indices/
+# prune_linear_layer from transformers.modeling_utils, which moved to
+# transformers.pytorch_utils partway through the 4.x line; even the newest
+# 4.x release keeps the old modeling_utils import broken, so after installing
+# RAM you also need to hand-patch that import — see SETUP.md step 6.
+transformers<5,>=4.25.1

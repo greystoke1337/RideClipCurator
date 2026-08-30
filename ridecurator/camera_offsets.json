@@ -1,0 +1,19 @@
+{
+  "GoPro": {
+    "offset_seconds": -36000,
+    "confidence": "high",
+    "note": "GoPro's creation_time is not real UTC — it's the camera's raw wall-clock reading mislabeled with a 'Z' suffix (confirmed by checking its 'tmcd' timecode track, which matches creation_time almost exactly, meaning both come straight from the internal clock with no UTC conversion). That clock reads AEST (Sydney/Melbourne standard time, UTC+10), most likely because the camera was set up in Sydney before the trip and was never adjusted for AEDT daylight saving (started 2025-10-05) or for the Northern Territory's UTC+9:30.",
+    "measured_by": "Grid-searched every 15-minute offset from -30h to +30h against every real GoPro and osmo clip in E:\\rushes\\uluru2025 (401 GoPro, 437 osmo), counting how many GoPro clips land within 3 minutes of an osmo clip once shifted. -10h gave 156/401 matches (several within single-digit seconds, e.g. GX011407 matched within 4s); the next-best candidate offset gave only 104. Held consistently across the whole 2025-10-11..2025-10-25 trip — no sign of a mid-trip clock reset.",
+    "measured_on": "2026-08-30"
+  },
+  "DJI": {
+    "offset_seconds": 0,
+    "confidence": "high",
+    "note": "osmo's creation_time already checks out as real UTC: cross-referenced against its own filename-embedded local timestamp, e.g. DJI_20251017055310_...MP4 (05:53:10 local) vs creation_time 2025-10-16T20:53:11Z — adding NT's UTC+9:30 to the UTC value lands on 05:53:11 local, matching the filename to the second."
+  },
+  "drone": {
+    "offset_seconds": 0,
+    "confidence": "unverified",
+    "note": "Not cross-checked. Drone footage is excluded from other_bike_visible overlap logic by design (see pipeline.stage_other_bike), so its timestamp accuracy is lower-stakes — revisit if drone timing ever matters for something else."
+  }
+}
