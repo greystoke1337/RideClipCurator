@@ -19,8 +19,43 @@ DEFAULT_RAW = "data/raw"
 DEFAULT_WORK = "data/work"
 DEFAULT_OUTPUT = "data/output"
 
-if "db_path" not in st.session_state:
-    st.session_state.db_path = DEFAULT_DB
+for key, default in [
+    ("db_path", DEFAULT_DB), ("raw_dir", DEFAULT_RAW),
+    ("work_dir", DEFAULT_WORK), ("output_dir", DEFAULT_OUTPUT),
+]:
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+
+def _browse_folder(initial: str) -> str | None:
+    """Native OS folder-picker dialog — this app only ever runs on the same
+    machine you're viewing it from, so popping a local Tk dialog is fine."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    root.wm_attributes("-topmost", 1)  # otherwise it can open behind the browser
+    selected = filedialog.askdirectory(initialdir=initial or ".")
+    root.destroy()
+    return selected or None
+
+
+def _pick_folder(session_key: str) -> None:
+    selected = _browse_folder(st.session_state.get(session_key, "."))
+    if selected:
+        st.session_state[session_key] = selected
+
+
+def folder_input(label: str, session_key: str) -> str:
+    col_input, col_browse = st.columns([6, 1])
+    with col_input:
+        st.text_input(label, key=session_key)
+    with col_browse:
+        st.write("")  # vertical spacer to align the button with the input box
+        st.button("Browse…", key=f"browse_{session_key}", on_click=_pick_folder, args=(session_key,))
+    return st.session_state[session_key]
+
 
 st.title("Uluru Ride Footage Curator")
 tab_process, tab_review = st.tabs(["Process", "Review"])
@@ -29,10 +64,9 @@ tab_process, tab_review = st.tabs(["Process", "Review"])
 # ---------------------------------------------------------------- Process ---
 with tab_process:
     st.subheader("1. Point at your footage")
-    raw_dir = st.text_input("Raw footage folder", value=DEFAULT_RAW)
-    work_dir = st.text_input("Working folder (proxies, audio, thumbnails)", value=DEFAULT_WORK)
-    db_path = st.text_input("Index database path", value=st.session_state.db_path)
-    st.session_state.db_path = db_path
+    raw_dir = folder_input("Raw footage folder", "raw_dir")
+    work_dir = folder_input("Working folder (proxies, audio, thumbnails)", "work_dir")
+    db_path = st.text_input("Index database path", key="db_path")
 
     with st.expander("Model / device settings"):
         ram_checkpoint = st.text_input(
@@ -228,7 +262,7 @@ with tab_review:
 
         st.divider()
         st.subheader("Export")
-        output_dir = st.text_input("Output folder", value=DEFAULT_OUTPUT)
+        output_dir = folder_input("Output folder", "output_dir")
         if st.button("Recompute scores against current selection"):
             scoring.rescore_against_selection(clips, selected_ids)
             for c in clips:
