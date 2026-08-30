@@ -22,8 +22,7 @@ ridecurator/        Core pipeline — plain, reusable functions, no CLI-only log
   ingest.py            scan a folder, pull duration/timestamp/camera via ffprobe
   proxy.py             ffmpeg proxy transcode + thumbnail generation
   sync.py              two-camera timestamp alignment (with drift-offset support)
-  motion.py            optical-flow steadiness score, direction of travel, and a
-                       flow-coherence signal (mount_type below reuses it)
+  motion.py            optical-flow steadiness score and direction of travel
   color.py             golden-hour hue/saturation check
   dedup.py             near-duplicate clustering: perceptual hash + a pretrained
                        CNN embedding (see note below)

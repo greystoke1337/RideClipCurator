@@ -28,7 +28,13 @@ DEDUP_EMBEDDING_SAMPLE_FRAMES = 5
 DEDUP_EMBEDDING_SIMILARITY_THRESHOLD = 0.97  # cosine similarity, 1.0 = identical
 
 # --- steadiness (spec 5.5) ---
-MOTION_SAMPLE_FRAMES = 40
+# Optical flow is sampled as short bursts of *consecutive* frames spread
+# across the clip, not one flow field per widely-spaced sample — Farneback
+# can't reliably track correspondences across a large gap (e.g. every 9th
+# frame at highway speed), which was producing wrong-sign flow and breaking
+# direction-of-travel below. Total flow fields computed ~= BURST_COUNT * (BURST_LENGTH - 1).
+MOTION_BURST_COUNT = 6
+MOTION_BURST_LENGTH = 6
 
 # --- direction of travel (forward/backward-facing mount) ---
 # Ego-motion signal from the same optical flow steadiness already computes:
@@ -39,18 +45,12 @@ MOTION_SAMPLE_FRAMES = 40
 # isn't trustworthy and camera_direction should be "unclear" rather than guessed.
 DIRECTION_MIN_COHERENCE = 0.35
 
-# --- mount type: bike-mounted vs handheld ---
-# Compound heuristic (like other_bike_visible): mounted footage has spatially
-# coherent, mostly-radial flow (see above) despite high-frequency vibration;
-# handheld has more rotational/erratic flow as the person's body and arm move.
-# RAM tags are a strong secondary signal — indoor/body-part context almost
-# always means handheld, mount-hardware context almost always means mounted.
-MOUNT_COHERENCE_THRESHOLD = 0.35  # below this, motion alone suggests handheld
-HANDHELD_TAG_WORDS = {
-    "hand", "arm", "selfie", "room", "indoor", "hallway", "corridor",
-    "stairs", "stairwell", "living room", "kitchen", "bedroom", "bathroom",
-}
-MOUNTED_TAG_WORDS = {"windshield", "dashboard", "handlebar", "mirror", "helmet"}
+# Mount type (bike-mounted vs handheld) was tried as a coherence+tags
+# heuristic and then a gait-frequency signal (walking's ~1-3Hz vertical bob
+# vs vehicle vibration's broadband pattern) — dropped both: a stabilized
+# gimbal shot defeats the gait signal, and coherence/tags alone can't
+# reliably separate "held very steady" from "bolted to a vehicle". Revisit
+# if a better signal turns up.
 
 # --- audio (spec 5.6) ---
 AUDIO_SILENCE_RMS_DBFS = -40.0  # below this, skip Whisper entirely

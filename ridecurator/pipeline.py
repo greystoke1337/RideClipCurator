@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from ridecurator import audio, color, db, dedup, ingest, motion, proxy, scoring, sync, tagging
-from ridecurator.config import HANDHELD_TAG_WORDS, MOUNT_COHERENCE_THRESHOLD, MOUNTED_TAG_WORDS
 from ridecurator.tagging import has_motorcycle_tag
 
 ProgressCB = Optional[Callable[[str, int, int], None]]
@@ -124,35 +123,6 @@ def stage_other_bike(conn, overlaps: dict[str, list[str]], progress_cb: Progress
         _report(progress_cb, "other_bike", i, len(clips))
 
 
-def stage_mount_type(conn, progress_cb: ProgressCB = None) -> None:
-    """Compound signal: flow coherence (spec-alike to other_bike_visible) +
-    RAM tags. Needs tags, so this runs after stage_tagging.
-
-    Motion alone: coherent, mostly-radial flow (despite vibration) -> mounted;
-    low coherence (rotational/erratic, as a hand or body moves) -> handheld.
-    Tags override/confirm when they're unambiguous either way.
-    """
-    clips = db.get_all_clips(conn)
-    for i, clip in enumerate(clips, 1):
-        tags = {t.lower() for t in (clip.get("tags") or [])}
-        coherence = clip.get("flow_coherence")
-
-        has_handheld_tag = bool(tags & HANDHELD_TAG_WORDS)
-        has_mounted_tag = bool(tags & MOUNTED_TAG_WORDS)
-
-        if has_handheld_tag and not has_mounted_tag:
-            mount_type = "handheld"
-        elif has_mounted_tag and not has_handheld_tag:
-            mount_type = "mounted"
-        elif coherence is None:
-            mount_type = None
-        else:
-            mount_type = "mounted" if coherence >= MOUNT_COHERENCE_THRESHOLD else "handheld"
-
-        db.upsert_clip(conn, {"clip_id": clip["clip_id"], "mount_type": mount_type})
-        _report(progress_cb, "mount_type", i, len(clips))
-
-
 def stage_dedup(conn, device: str = "cuda", progress_cb: ProgressCB = None) -> None:
     clips = db.get_all_clips(conn)
     fingerprints = {}
@@ -202,6 +172,5 @@ def run_all(
     stage_tagging(conn, ram_checkpoint, device, progress_cb)
     stage_audio(conn, work_dir, whisper_model_size, progress_cb)
     stage_other_bike(conn, overlaps, progress_cb)
-    stage_mount_type(conn, progress_cb)
     stage_dedup(conn, device, progress_cb)
     stage_scoring(conn, progress_cb)

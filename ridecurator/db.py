@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS clips (
     steadiness_score REAL,
     camera_direction TEXT,      -- "forward" | "backward" | NULL ("unclear")
     flow_coherence REAL,        -- how well optical flow fits a radial expansion/contraction model
-    mount_type TEXT,            -- "mounted" | "handheld" | NULL ("unclear")
     other_bike_visible INTEGER,
     dup_group_id TEXT,
     is_best_of_group INTEGER,
@@ -53,7 +52,6 @@ def _migrate(conn: sqlite3.Connection) -> None:
     new_columns = {
         "camera_direction": "TEXT",
         "flow_coherence": "REAL",
-        "mount_type": "TEXT",
     }
     for name, sql_type in new_columns.items():
         if name not in existing:
